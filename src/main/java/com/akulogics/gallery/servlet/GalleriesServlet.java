@@ -58,7 +58,9 @@ public class GalleriesServlet extends HttpServlet {
                 response.append(description);
                 response.append("</p></i>");
                 if (subGalleryNames.length()>0) {
+                    response.append("<div class=\"sub-gallery\">");
                     response.append(subGalleryNames);
+                    response.append("</div>");
                 }
                 response.append("</li>");
             };
