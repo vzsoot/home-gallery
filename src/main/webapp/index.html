@@ -1,0 +1,87 @@
+<html lang="en">
+<head>
+    <meta name="google-signin-scope" content="profile email">
+    <meta name="google-signin-client_id" content="202284166040-281utnubjpu62cplqvuolla1vrg554up.apps.googleusercontent.com">
+    <meta charset="utf-8">
+
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="js/lightgallery.min.js"></script>
+    <script src="js/lg-thumbnail.min.js"></script>
+    <script src="js/lg-fullscreen.min.js"></script>
+    <script src="js/lg-video.min.js"></script>
+    <script src="js/list.min.js"></script>
+
+    <link rel="stylesheet" href="css/lightgallery.css">
+    <link rel="stylesheet" href="css/galleries.css">
+</head>
+<body>
+
+<div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div><br/>
+
+<div id="galleries">
+    <input class="search" placeholder="Keresés" />
+    <button class="sort" data-sort="name">
+        Rendez név szerint
+    </button>
+    <button class="sort" data-sort="date">
+        Rendez dátum szerint
+    </button>
+    <button class="sort" data-sort="description">
+        Rendez leírás szerint
+    </button>
+
+    <ul class="list" id="galleryList">
+        Kérlek jelentkezz be!
+    </ul>
+</div>
+
+<script>
+    function loadList(listData) {
+        var options = {
+            valueNames: [ 'name', 'date', 'description' ]
+        };
+
+        var galleryNode = document.getElementById('galleryList');
+        galleryNode.innerHTML = listData;
+
+        new List('galleries', options);
+    }
+
+    function doGalleryClick(path, node) {
+        xhr('gallery?path='+path, 'GET', null, function(items) {
+            lightGallery(node, {
+                dynamic: true,
+                dynamicEl: items
+            });
+
+        });
+    }
+
+    function onSignIn(googleUser) {
+        var token = googleUser.getAuthResponse().id_token;
+
+        var galleryNode = document.getElementById('galleryList');
+        galleryNode.innerHTML = '<div class="list-loading"></div>';
+
+        xhr('login', 'POST', token, function(result) {
+            if (result.valid) {
+                xhr('galleries', 'GET', '', loadList, false);
+            }
+        });
+    }
+
+    function xhr(url, method, payload, callback, isJSON) {
+        var isJSONParam = isJSON === undefined ? true : isJSON;
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                callback(isJSONParam ? JSON.parse(xhttp.responseText) : xhttp.responseText);
+            }
+        };
+        xhttp.open(method, url, true);
+        xhttp.send(payload);
+    }
+
+</script>
+</body>
+</html>
