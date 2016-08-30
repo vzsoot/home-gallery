@@ -48,7 +48,7 @@ public class AuthenticationService {
         boolean result = true;
         DirectoryItem checkItem = null;
 
-        FileItem fileItem = FileService.getService().fetchDirectoryItem(path);
+        FileItem fileItem = FileService.getService().fetchFileItem(path);
 
         if (fileItem.isDirectory()) {
             if (fileItem.getParent()==null) {
@@ -57,7 +57,7 @@ public class AuthenticationService {
                 checkItem = (DirectoryItem)fileItem;
                 result = checkPathPermission(fileItem.getParent().getPath(), userId);
             }
-        } else {
+        } else if (fileItem.getParent()!=null) {
             result = checkPathPermission(fileItem.getParent().getPath(), userId);
         }
 

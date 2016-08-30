@@ -53,7 +53,7 @@ public class FileService {
     }
 
     Predicate<File> validFileItem = file ->
-            (file.isDirectory() && !file.getName().startsWith("!") && !file.getName().startsWith(FULL_SIZE_DIR) && !file.getName().startsWith(THUMBNAIL_DIR))
+            (file.isDirectory() && !file.getName().startsWith("!"))
             || Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith);
 
     protected FileItem getFileItem(String path) {
@@ -173,27 +173,34 @@ public class FileService {
     protected CacheableItem itemCacheBuilder(String path) {
         CacheableItem result = null;
 
-        FileItem pathItem = getFileItem(path);
-        if (pathItem!=null && pathItem.isDirectory()) {
+        CacheableItem pathItem = itemCache.get(path);
+        if (pathItem==null) {
+            pathItem = getFileItem(path);
+        }
+
+        if (pathItem!=null && pathItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
             DirectoryItem directoryItem = (DirectoryItem)pathItem;
 
-            List<FileItem> pathItems = getFileItems(pathItem);
-            pathItems.forEach(item -> item.setParent(directoryItem));
+            List<FileItem> pathItems = getFileItems(directoryItem);
+            pathItems.forEach(item -> {
+                item.setParent(directoryItem);
+                itemCache.put(item.getPath(), item);
+            });
 
             directoryItem.setDirectories(
                     pathItems.stream()
-                            .filter(FileItem::isDirectory)
+                            .filter(item -> item.isDirectory() &&
+                                    !item.getFile().getName().startsWith(FULL_SIZE_DIR) &&
+                                    !item.getFile().getName().startsWith(THUMBNAIL_DIR))
                             .map(item -> (DirectoryItem) itemCacheBuilder(item.getPath()))
                             .collect(Collectors.toList())
             );
-            directoryItem.getDirectories().forEach(item -> itemCache.put(item.getPath(), item));
 
             directoryItem.setFiles(
                     pathItems.stream()
                             .filter(item -> !item.isDirectory())
                             .collect(Collectors.toList())
             );
-            directoryItem.getFiles().forEach(item -> itemCache.put(item.getPath(), item));
 
             directoryItem.setPermissionItem(getPermissionItem(Paths.get(path, PERMISSION_FILE).toString()));
 
@@ -207,23 +214,17 @@ public class FileService {
         return itemCache;
     }
 
-    public PermissionItem fetchPermissionItem(String path) {
-        PermissionItem result = null;
-        CacheableItem cacheableItem = getFileItemCache().get(path);
-
-        if (cacheableItem!=null && cacheableItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
-            result = ((DirectoryItem)cacheableItem).getPermissionItem();
-        }
-
-        return result;
-    }
-
     public FileItem fetchFileItem(String path) {
-        FileItem result = null;
+        FileItem result;
         CacheableItem cacheableItem = getFileItemCache().get(path);
 
         if (cacheableItem!=null) {
             result = (FileItem)cacheableItem;
+        } else {
+            result = getFileItem(path);
+            if (result!=null) {
+                result.setParent(fetchFileItem(Paths.get(result.getPath()).getParent().toString()));
+            }
         }
 
         return result;

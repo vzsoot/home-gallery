@@ -96,7 +96,6 @@ public class ItemServlet extends HttpServlet {
                         }
                         in.close();
                         out.flush();
-
                     }
                 }
             } catch (Throwable ex) {
