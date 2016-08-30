@@ -1,6 +1,7 @@
 package com.akulogics.gallery.servlet;
 
 import com.akulogics.gallery.bean.FileItem;
+import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
 
 import javax.imageio.ImageIO;
@@ -28,9 +29,9 @@ public class ItemServlet extends HttpServlet {
             try {
                 String path = req.getParameter("path");
 
-                FileItem fileItem = FileService.getService(userId).getFileItem(path);
+                FileItem fileItem = FileService.getService().fetchFileItem(path);
 
-                if (fileItem != null && !fileItem.isDirectory()) {
+                if (fileItem != null && !fileItem.isDirectory() && AuthenticationService.getService().checkPathPermission(path, userId)) {
                     Integer height;
 
                     try {

@@ -1,6 +1,9 @@
 package com.akulogics.gallery.service;
 
+import com.akulogics.gallery.bean.CacheableItem;
+import com.akulogics.gallery.bean.DirectoryItem;
 import com.akulogics.gallery.bean.FileItem;
+import com.akulogics.gallery.bean.PermissionItem;
 import org.apache.tika.Tika;
 
 import java.io.File;
@@ -8,33 +11,41 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by zsolt_venczel on 2016.08.23
  */
 public class FileService {
 
-    public static final String GALLERY_PATH = System.getProperty("galleryPath", ".");
-    public static final Path GALLERY_PATH_ITEM = Paths.get(GALLERY_PATH);
+    private final String PERMISSION_FILE = System.getProperty("permissionFile", "gallery.permitted.list");
 
-    public static final String[] SUPPORTED_EXTENSIONS = System.getProperty("extensions", "jpg,jpeg,png,m4v,mp4,mkv,wmv,mov").split(",");
-    public static final String FULL_SIZE_DIR = System.getProperty("fullSizeDir", "full");
-    public static final String THUMBNAIL_DIR = System.getProperty("thumbnailDir", "thumb");
+    private final String GALLERY_PATH = System.getProperty("galleryPath", ".");
+    private final Path GALLERY_PATH_ITEM = Paths.get(GALLERY_PATH);
 
-    private String userId;
-    private static Tika tika = new Tika();
+    private final String[] SUPPORTED_EXTENSIONS = System.getProperty("extensions", "jpg,jpeg,png,m4v,mp4,mkv,wmv,mov").split(",");
+    private final String FULL_SIZE_DIR = System.getProperty("fullSizeDir", "full");
+    private final String THUMBNAIL_DIR = System.getProperty("thumbnailDir", "thumb");
 
-    private FileService(String userId) {
-        this.userId = userId;
+    private final Tika tika = new Tika();
+
+    private static FileService service = null;
+
+    public static FileService getService() {
+        if (service==null) {
+            synchronized (FileService.class.getClass()) {
+                service = new FileService();
+            }
+        }
+        return service;
     }
 
-    public static FileService getService(String userId) {
-        return new FileService(userId);
+    private FileService() {
+        initItemCache();
     }
 
     protected FileItem getFileItem(File path) {
@@ -45,15 +56,19 @@ public class FileService {
             (file.isDirectory() && !file.getName().startsWith("!") && !file.getName().startsWith(FULL_SIZE_DIR) && !file.getName().startsWith(THUMBNAIL_DIR))
             || Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith);
 
-    public FileItem getFileItem(String path) {
+    protected FileItem getFileItem(String path) {
         FileItem result = null;
 
         Path galleryPath = Paths.get(GALLERY_PATH, path);
-        if (Files.exists(galleryPath) && AuthenticationService.getService().checkPathPermission(galleryPath, userId)) {
+        if (Files.exists(galleryPath)) {
             File galleryPathFile = galleryPath.toFile();
             if (validFileItem.test(galleryPathFile)) {
 
-                result = new FileItem();
+                if (galleryPathFile.isDirectory()) {
+                    result = new DirectoryItem();
+                } else {
+                    result = new FileItem();
+                }
                 result.setDirectory(galleryPathFile.isDirectory());
                 result.setFile(galleryPathFile);
                 result.setPath(path.replace("\\", "/"));
@@ -64,16 +79,30 @@ public class FileService {
                 }
 
                 if (!result.isDirectory()) {
-                    String fileName = galleryPathFile.getName();
+                    String fileFullName = galleryPathFile.getName();
+                    String fileName = fileFullName.substring(0, fileFullName.lastIndexOf("."));
+                    String fileExtension = fileFullName.substring(fileFullName.lastIndexOf(".") + 1);
 
-                    Path galleryFullPath = Paths.get(galleryPathFile.getParent(), FULL_SIZE_DIR, fileName);
-                    Path galleryThumbPath = Paths.get(galleryPathFile.getParent(), THUMBNAIL_DIR, fileName);
+                    String fileNameLowerExt = fileName + '.' + fileExtension.toLowerCase();
+                    String fileNameUpperExt = fileName + '.' + fileExtension.toUpperCase();
 
-                    if (Files.exists(galleryFullPath)) {
-                        result.setPathFull(path.substring(0, path.length()-fileName.length()) + FULL_SIZE_DIR + File.separator+ galleryPathFile.getName());
+                    Path galleryFullPathLowerExt = Paths.get(galleryPathFile.getParent(), FULL_SIZE_DIR, fileNameLowerExt);
+                    Path galleryFullPathUpperExt = Paths.get(galleryPathFile.getParent(), FULL_SIZE_DIR, fileNameUpperExt);
+                    Path galleryThumbPathLowerExt = Paths.get(galleryPathFile.getParent(), THUMBNAIL_DIR, fileNameLowerExt);
+                    Path galleryThumbPathUpperExt = Paths.get(galleryPathFile.getParent(), THUMBNAIL_DIR, fileNameUpperExt);
+
+                    String pathName = path.substring(0, path.length() - fileFullName.length());
+
+                    if (Files.exists(galleryFullPathLowerExt)) {
+                        result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameLowerExt);
+                    } else if (Files.exists(galleryFullPathUpperExt)) {
+                        result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameUpperExt);
                     }
-                    if (Files.exists(galleryThumbPath)) {
-                        result.setPathThumb(path.substring(0, path.length() - fileName.length()) + THUMBNAIL_DIR + File.separator + galleryPathFile.getName());
+
+                    if (Files.exists(galleryThumbPathLowerExt)) {
+                        result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameLowerExt);
+                    } else if (Files.exists(galleryThumbPathUpperExt)) {
+                        result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameUpperExt);
                     }
 
                 }
@@ -90,7 +119,7 @@ public class FileService {
         return result;
     }
 
-    public List<FileItem> getFileItems(FileItem fileItem) {
+    protected List<FileItem> getFileItems(FileItem fileItem) {
         List<FileItem> result = Collections.emptyList();
         if (fileItem!=null && fileItem.isDirectory()) {
             File[] files = fileItem.getFile().listFiles();
@@ -100,6 +129,27 @@ public class FileService {
                         .collect(Collectors.toList());
             }
         }
+        return result;
+    }
+
+    Predicate<File> validPermissionItem = file ->
+            (!file.isDirectory() && PERMISSION_FILE.equals(file.getName()));
+
+    protected PermissionItem getPermissionItem(String path) {
+        PermissionItem result = null;
+
+        Path permissionPath = Paths.get(GALLERY_PATH, path);
+        if (Files.exists(permissionPath)) {
+            File permissionFile = permissionPath.toFile();
+            if (validPermissionItem.test(permissionFile)) {
+                try (Stream<String> lines = Files.lines(permissionPath)) {
+                    result = new PermissionItem(lines.collect(Collectors.toSet()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         return result;
     }
 
@@ -114,4 +164,79 @@ public class FileService {
         return result;
     }
 
+    private Map<String, CacheableItem> itemCache = new ConcurrentHashMap<>();
+
+    protected void initItemCache() {
+        itemCache.put("", itemCacheBuilder(""));
+    }
+
+    protected CacheableItem itemCacheBuilder(String path) {
+        CacheableItem result = null;
+
+        FileItem pathItem = getFileItem(path);
+        if (pathItem!=null && pathItem.isDirectory()) {
+            DirectoryItem directoryItem = (DirectoryItem)pathItem;
+
+            List<FileItem> pathItems = getFileItems(pathItem);
+            pathItems.forEach(item -> item.setParent(directoryItem));
+
+            directoryItem.setDirectories(
+                    pathItems.stream()
+                            .filter(FileItem::isDirectory)
+                            .map(item -> (DirectoryItem) itemCacheBuilder(item.getPath()))
+                            .collect(Collectors.toList())
+            );
+            directoryItem.getDirectories().forEach(item -> itemCache.put(item.getPath(), item));
+
+            directoryItem.setFiles(
+                    pathItems.stream()
+                            .filter(item -> !item.isDirectory())
+                            .collect(Collectors.toList())
+            );
+            directoryItem.getFiles().forEach(item -> itemCache.put(item.getPath(), item));
+
+            directoryItem.setPermissionItem(getPermissionItem(Paths.get(path, PERMISSION_FILE).toString()));
+
+            result = directoryItem;
+        }
+
+        return result;
+    }
+
+    protected Map<String, CacheableItem> getFileItemCache() {
+        return itemCache;
+    }
+
+    public PermissionItem fetchPermissionItem(String path) {
+        PermissionItem result = null;
+        CacheableItem cacheableItem = getFileItemCache().get(path);
+
+        if (cacheableItem!=null && cacheableItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
+            result = ((DirectoryItem)cacheableItem).getPermissionItem();
+        }
+
+        return result;
+    }
+
+    public FileItem fetchFileItem(String path) {
+        FileItem result = null;
+        CacheableItem cacheableItem = getFileItemCache().get(path);
+
+        if (cacheableItem!=null) {
+            result = (FileItem)cacheableItem;
+        }
+
+        return result;
+    }
+
+    public DirectoryItem fetchDirectoryItem(String path) {
+        DirectoryItem result = null;
+        CacheableItem cacheableItem = getFileItemCache().get(path);
+
+        if (cacheableItem!=null && cacheableItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
+            result = ((DirectoryItem)cacheableItem);
+        }
+
+        return result;
+    }
 }
