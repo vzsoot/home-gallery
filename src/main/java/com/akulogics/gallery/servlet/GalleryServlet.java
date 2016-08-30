@@ -20,8 +20,6 @@ import java.util.stream.Collectors;
  */
 public class GalleryServlet extends HttpServlet {
 
-    public static final String[] sizes = System.getProperty("sizes", "360,480,720,1080").split(",");
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
@@ -42,8 +40,8 @@ public class GalleryServlet extends HttpServlet {
                     if (item.getMimeType()!=null && item.getMimeType().startsWith("video")) {
                         galleryItem.setDownloadUrl(pathParam);
                         galleryItem.setThumb("img/video-icon.jpg");
-                        galleryItem.setPoster("img/video-icon.jpg");
-                        galleryItem.setHtml("<div><video class=\"lg-video-object lg-html5\" controls>" +
+                        galleryItem.setHtml("<div><video class=\"lg-video-object lg-html5\" " +
+                                "controls preload=\"metadata\">" +
                                 "<source src=\"" + pathParam + "\" type=\"" + item.getMimeType() + "\"></video></div>");
                     } else {
                         galleryItem.setDownloadUrl(pathParam);
@@ -58,10 +56,6 @@ public class GalleryServlet extends HttpServlet {
                         } else {
                             galleryItem.setThumb(pathParam + "&height=100");
                         }
-
-                        String responsive = Arrays.stream(sizes).map((size) -> pathParam + "&height=" + size + " " + size)
-                                .collect(Collectors.joining(","));
-                        galleryItem.setResponsive(responsive);
                     }
                     galleryItems.add(galleryItem);
                 }
