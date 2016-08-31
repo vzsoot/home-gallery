@@ -13,8 +13,6 @@ public class FileItem implements CacheableItem {
     private String pathFull;
     private String pathThumb;
     private String mimeType;
-    private boolean directory;
-    private boolean empty;
 
     public FileItem getParent() {
         return parent;
@@ -62,22 +60,6 @@ public class FileItem implements CacheableItem {
 
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
-    }
-
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    public void setDirectory(boolean directory) {
-        this.directory = directory;
-    }
-
-    public boolean isEmpty() {
-        return empty;
-    }
-
-    public void setEmpty(boolean empty) {
-        this.empty = empty;
     }
 
     @Override

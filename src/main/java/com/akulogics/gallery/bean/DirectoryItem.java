@@ -10,6 +10,15 @@ public class DirectoryItem extends FileItem {
     private List<FileItem> files;
     private List<DirectoryItem> directories;
     private PermissionItem permissionItem;
+    private boolean empty;
+
+    public boolean isEmpty() {
+        return empty;
+    }
+
+    public void setEmpty(boolean empty) {
+        this.empty = empty;
+    }
 
     public List<FileItem> getFiles() {
         return files;

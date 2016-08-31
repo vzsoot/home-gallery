@@ -1,9 +1,6 @@
 package com.akulogics.gallery.service;
 
-import com.akulogics.gallery.bean.CacheableItem;
-import com.akulogics.gallery.bean.DirectoryItem;
-import com.akulogics.gallery.bean.FileItem;
-import com.akulogics.gallery.bean.PermissionItem;
+import com.akulogics.gallery.bean.*;
 import org.apache.tika.Tika;
 
 import java.io.File;
@@ -48,83 +45,90 @@ public class FileService {
         initItemCache();
     }
 
-    protected FileItem getFileItem(File path) {
-        return getFileItem(GALLERY_PATH_ITEM.relativize(path.toPath()).toString());
+    protected FileItem getItem(File path) {
+        return getItem(GALLERY_PATH_ITEM.relativize(path.toPath()).toString());
     }
 
     Predicate<File> validFileItem = file ->
             (file.isDirectory() && !file.getName().startsWith("!"))
             || Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith);
 
-    protected FileItem getFileItem(String path) {
+    private FileItem getFileItem(File file, String path) {
+        FileItem result = new FileItem();
+
+        try {
+            result.setMimeType(tika.detect(file));
+        } catch (IOException e) {
+            result.setMimeType("");
+        }
+
+        String fileFullName = file.getName();
+        String fileName = fileFullName.substring(0, fileFullName.lastIndexOf("."));
+        String fileExtension = fileFullName.substring(fileFullName.lastIndexOf(".") + 1);
+
+        String fileNameLowerExt = fileName + '.' + fileExtension.toLowerCase();
+        String fileNameUpperExt = fileName + '.' + fileExtension.toUpperCase();
+
+        Path galleryFullPathLowerExt = Paths.get(file.getParent(), FULL_SIZE_DIR, fileNameLowerExt);
+        Path galleryFullPathUpperExt = Paths.get(file.getParent(), FULL_SIZE_DIR, fileNameUpperExt);
+        Path galleryThumbPathLowerExt = Paths.get(file.getParent(), THUMBNAIL_DIR, fileNameLowerExt);
+        Path galleryThumbPathUpperExt = Paths.get(file.getParent(), THUMBNAIL_DIR, fileNameUpperExt);
+
+        String pathName = path.substring(0, path.length() - fileFullName.length());
+
+        if (Files.exists(galleryFullPathLowerExt)) {
+            result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameLowerExt);
+        } else if (Files.exists(galleryFullPathUpperExt)) {
+            result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameUpperExt);
+        }
+
+        if (Files.exists(galleryThumbPathLowerExt)) {
+            result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameLowerExt);
+        } else if (Files.exists(galleryThumbPathUpperExt)) {
+            result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameUpperExt);
+        }
+
+        return result;
+    }
+
+    private DirectoryItem getDirectoryItem(File file) {
+        DirectoryItem result = new DirectoryItem();
+
+        if (galleryHasItem(file)) {
+            result.setEmpty(false);
+        } else {
+            result.setEmpty(true);
+        }
+
+        return result;
+    }
+
+    protected FileItem getItem(String path) {
         FileItem result = null;
 
         Path galleryPath = Paths.get(GALLERY_PATH, path);
         if (Files.exists(galleryPath)) {
             File galleryPathFile = galleryPath.toFile();
             if (validFileItem.test(galleryPathFile)) {
-
                 if (galleryPathFile.isDirectory()) {
-                    result = new DirectoryItem();
+                    result = getDirectoryItem(galleryPathFile);
                 } else {
-                    result = new FileItem();
+                    result = getFileItem(galleryPathFile, path);
                 }
-                result.setDirectory(galleryPathFile.isDirectory());
                 result.setFile(galleryPathFile);
                 result.setPath(path.replace("\\", "/"));
-                try {
-                    result.setMimeType(tika.detect(galleryPathFile));
-                } catch (IOException e) {
-                    result.setMimeType("");
-                }
-
-                if (!result.isDirectory()) {
-                    String fileFullName = galleryPathFile.getName();
-                    String fileName = fileFullName.substring(0, fileFullName.lastIndexOf("."));
-                    String fileExtension = fileFullName.substring(fileFullName.lastIndexOf(".") + 1);
-
-                    String fileNameLowerExt = fileName + '.' + fileExtension.toLowerCase();
-                    String fileNameUpperExt = fileName + '.' + fileExtension.toUpperCase();
-
-                    Path galleryFullPathLowerExt = Paths.get(galleryPathFile.getParent(), FULL_SIZE_DIR, fileNameLowerExt);
-                    Path galleryFullPathUpperExt = Paths.get(galleryPathFile.getParent(), FULL_SIZE_DIR, fileNameUpperExt);
-                    Path galleryThumbPathLowerExt = Paths.get(galleryPathFile.getParent(), THUMBNAIL_DIR, fileNameLowerExt);
-                    Path galleryThumbPathUpperExt = Paths.get(galleryPathFile.getParent(), THUMBNAIL_DIR, fileNameUpperExt);
-
-                    String pathName = path.substring(0, path.length() - fileFullName.length());
-
-                    if (Files.exists(galleryFullPathLowerExt)) {
-                        result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameLowerExt);
-                    } else if (Files.exists(galleryFullPathUpperExt)) {
-                        result.setPathFull(pathName + FULL_SIZE_DIR + File.separator + fileNameUpperExt);
-                    }
-
-                    if (Files.exists(galleryThumbPathLowerExt)) {
-                        result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameLowerExt);
-                    } else if (Files.exists(galleryThumbPathUpperExt)) {
-                        result.setPathThumb(pathName + THUMBNAIL_DIR + File.separator + fileNameUpperExt);
-                    }
-
-                }
-
-                if (result.isDirectory() && galleryHasItem(result)) {
-                    result.setEmpty(false);
-                } else {
-                    result.setEmpty(true);
-                }
-
             }
         }
 
         return result;
     }
 
-    protected List<FileItem> getFileItems(FileItem fileItem) {
+    protected List<FileItem> getFilesForDirectory(DirectoryItem directoryItem) {
         List<FileItem> result = Collections.emptyList();
-        if (fileItem!=null && fileItem.isDirectory()) {
-            File[] files = fileItem.getFile().listFiles();
+        if (directoryItem!=null) {
+            File[] files = directoryItem.getFile().listFiles();
             if (files!=null) {
-                result = Arrays.stream(files).map(this::getFileItem)
+                result = Arrays.stream(files).map(this::getItem)
                         .filter(file -> file!=null)
                         .collect(Collectors.toList());
             }
@@ -153,10 +157,10 @@ public class FileService {
         return result;
     }
 
-    protected boolean galleryHasItem(FileItem fileItem) {
+    protected boolean galleryHasItem(File directoryItem) {
         boolean result = false;
 
-        File[] files = fileItem.getFile().listFiles();
+        File[] files = directoryItem.listFiles();
         if (files!=null) {
             result = Arrays.stream(files).anyMatch(file -> Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith));
         }
@@ -175,13 +179,13 @@ public class FileService {
 
         CacheableItem pathItem = itemCache.get(path);
         if (pathItem==null) {
-            pathItem = getFileItem(path);
+            pathItem = getItem(path);
         }
 
         if (pathItem!=null && pathItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
             DirectoryItem directoryItem = (DirectoryItem)pathItem;
 
-            List<FileItem> pathItems = getFileItems(directoryItem);
+            List<FileItem> pathItems = getFilesForDirectory(directoryItem);
             pathItems.forEach(item -> {
                 item.setParent(directoryItem);
                 itemCache.put(item.getPath(), item);
@@ -189,7 +193,7 @@ public class FileService {
 
             directoryItem.setDirectories(
                     pathItems.stream()
-                            .filter(item -> item.isDirectory() &&
+                            .filter(item -> item.getItemType() == CacheableItem.ItemType.DIRECTORY &&
                                     !item.getFile().getName().startsWith(FULL_SIZE_DIR) &&
                                     !item.getFile().getName().startsWith(THUMBNAIL_DIR))
                             .map(item -> (DirectoryItem) itemCacheBuilder(item.getPath()))
@@ -198,11 +202,22 @@ public class FileService {
 
             directoryItem.setFiles(
                     pathItems.stream()
-                            .filter(item -> !item.isDirectory())
+                            .filter(item -> item.getItemType() == CacheableItem.ItemType.FILE)
                             .collect(Collectors.toList())
             );
 
-            directoryItem.setPermissionItem(getPermissionItem(Paths.get(path, PERMISSION_FILE).toString()));
+            String permissionItemPath = Paths.get(path, PERMISSION_FILE).toString();
+            CacheableItem permissionItem = itemCache.get(permissionItemPath);
+            if (permissionItem==null) {
+                permissionItem = getPermissionItem(permissionItemPath);
+                if (permissionItem==null) {
+                    permissionItem = EmptyItem.getItem();
+                }
+                itemCache.put(permissionItemPath, permissionItem);
+            }
+            if (permissionItem.getItemType() == CacheableItem.ItemType.PERMISSION) {
+                directoryItem.setPermissionItem((PermissionItem)permissionItem);
+            }
 
             result = directoryItem;
         }
@@ -221,7 +236,7 @@ public class FileService {
         if (cacheableItem!=null) {
             result = (FileItem)cacheableItem;
         } else {
-            result = getFileItem(path);
+            result = getItem(path);
             if (result!=null) {
                 result.setParent(fetchFileItem(Paths.get(result.getPath()).getParent().toString()));
             }

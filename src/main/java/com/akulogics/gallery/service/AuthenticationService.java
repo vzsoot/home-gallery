@@ -1,5 +1,6 @@
 package com.akulogics.gallery.service;
 
+import com.akulogics.gallery.bean.CacheableItem;
 import com.akulogics.gallery.bean.DirectoryItem;
 import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.bean.PermissionItem;
@@ -50,7 +51,7 @@ public class AuthenticationService {
 
         FileItem fileItem = FileService.getService().fetchFileItem(path);
 
-        if (fileItem.isDirectory()) {
+        if (fileItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
             if (fileItem.getParent()==null) {
                 checkItem = (DirectoryItem)fileItem;
             } else {

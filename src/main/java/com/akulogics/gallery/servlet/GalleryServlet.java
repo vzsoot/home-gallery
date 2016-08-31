@@ -28,7 +28,7 @@ public class GalleryServlet extends HttpServlet {
 
         if (userId != null && AuthenticationService.getService().checkPathPermission(path, userId)) {
             DirectoryItem galleryDirectory = FileService.getService().fetchDirectoryItem(path);
-            if (galleryDirectory!=null && galleryDirectory.isDirectory()) {
+            if (galleryDirectory!=null) {
                 galleryDirectory.getFiles().stream()
                         .filter(item -> AuthenticationService.getService().checkPathPermission(item.getPath(), userId))
                         .sorted((item1, item2) -> item1.getPath().compareTo(item2.getPath()))

@@ -6,7 +6,7 @@ package com.akulogics.gallery.bean;
 public interface CacheableItem {
 
     enum ItemType {
-        FILE, DIRECTORY, PERMISSION
+        FILE, DIRECTORY, PERMISSION, EMPTY
     }
 
     ItemType getItemType();

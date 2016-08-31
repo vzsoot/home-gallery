@@ -1,5 +1,6 @@
 package com.akulogics.gallery.servlet;
 
+import com.akulogics.gallery.bean.CacheableItem;
 import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
@@ -31,7 +32,8 @@ public class ItemServlet extends HttpServlet {
 
                 FileItem fileItem = FileService.getService().fetchFileItem(path);
 
-                if (fileItem != null && !fileItem.isDirectory() && AuthenticationService.getService().checkPathPermission(path, userId)) {
+                if (fileItem != null && fileItem.getItemType() == CacheableItem.ItemType.FILE &&
+                        AuthenticationService.getService().checkPathPermission(path, userId)) {
                     Integer height;
 
                     try {
