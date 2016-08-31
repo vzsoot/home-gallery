@@ -31,7 +31,7 @@ public class GalleryServlet extends HttpServlet {
             if (galleryDirectory!=null) {
                 galleryDirectory.getFiles().stream()
                         .filter(item -> AuthenticationService.getService().checkPathPermission(item.getPath(), userId))
-                        .sorted((item1, item2) -> item1.getPath().compareTo(item2.getPath()))
+                        .sorted((item1, item2) -> item1.getPath().compareToIgnoreCase(item2.getPath()))
                         .forEach(item -> {
                             String pathParam = "/item?path=" + item.getPath();
 
