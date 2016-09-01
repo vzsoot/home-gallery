@@ -40,6 +40,9 @@ a h3, .sub-gallery a {
 a h3:hover, .sub-gallery a:hover {
     background-color: #ff5400;
 }
+a:visited, a:visited h3 {
+    background-color: #fec57d;
+}
 .sub-gallery {
     font-style: italic;
 }
