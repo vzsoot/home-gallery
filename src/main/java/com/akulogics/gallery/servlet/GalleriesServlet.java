@@ -30,12 +30,12 @@ public class GalleriesServlet extends HttpServlet {
             BiConsumer<DirectoryItem, StringBuilder> galleryLinkBuilder = (fileItem, response) -> {
                 String directoryName = fileItem.getFile().getName().trim();
                 if (!fileItem.isEmpty()) {
-                    response.append("<i><a href=\"#").append(fileItem.getPath())
+                    response.append("<a href=\"#").append(fileItem.getPath())
                             .append("\" onclick=\"doGalleryClick('")
                             .append(fileItem.getPath())
                             .append("', this)\">");
                     response.append(directoryName);
-                    response.append("</a></i><br/>");
+                    response.append("</a>");
                 }
             };
 

@@ -14,7 +14,7 @@ h2 {
 }
 .list > li {
     display:block;
-    background-color: #eee;
+    background-color: #91f082;
     padding:10px;
     box-shadow: inset 0 1px 0 #fff;
     float: left;
@@ -26,6 +26,23 @@ h2 {
 a {
     text-decoration: none;
 }
+a h3, .sub-gallery a {
+    background-color: #fa981b;
+    border-radius: 5px;
+    padding: 3px 5px;
+    color: white;
+    display: inline-block;
+    font-weight: normal;
+}
+.sub-gallery a {
+    margin: 2px;
+}
+a h3:hover, .sub-gallery a:hover {
+    background-color: #ff5400;
+}
+.sub-gallery {
+    font-style: italic;
+}
 .avatar {
     max-width: 150px;
 }
@@ -35,8 +52,7 @@ img {
 h3 {
     font-size: 16px;
     margin:0 0 0.3rem;
-    font-weight: normal;
-    font-weight:bold;
+    font-weight: bold;
 }
 p {
     margin:0;
