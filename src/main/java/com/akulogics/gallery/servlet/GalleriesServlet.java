@@ -1,6 +1,8 @@
 package com.akulogics.gallery.servlet;
 
+import com.akulogics.gallery.bean.DirectoryItem;
 import com.akulogics.gallery.bean.FileItem;
+import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
 
 import javax.servlet.ServletException;
@@ -25,7 +27,7 @@ public class GalleriesServlet extends HttpServlet {
         String htmlResponse = "";
 
         if (userId!=null) {
-            BiConsumer<FileItem, StringBuilder> galleryLinkBuilder = (fileItem, response) -> {
+            BiConsumer<DirectoryItem, StringBuilder> galleryLinkBuilder = (fileItem, response) -> {
                 String directoryName = fileItem.getFile().getName().trim();
                 if (!fileItem.isEmpty()) {
                     response.append("<i><a href=\"#").append(fileItem.getPath())
@@ -37,19 +39,19 @@ public class GalleriesServlet extends HttpServlet {
                 }
             };
 
-            BiConsumer<FileItem, StringBuilder> listItemBuilder = (fileItem, response) -> {
-                String directoryName = fileItem.getFile().getName();
+            BiConsumer<DirectoryItem, StringBuilder> listItemBuilder = (directoryItem, response) -> {
+                String directoryName = directoryItem.getFile().getName();
                 String chunks[] = directoryName.split("-");
                 String name = chunks[0].trim();
-                String subGalleryNames = galleryList(fileItem.getPath(), userId.toString(), galleryLinkBuilder).trim();
+                String subGalleryNames = galleryList(directoryItem.getPath(), userId.toString(), galleryLinkBuilder).trim();
                 String date = chunks.length>1 ? chunks[1].trim() : "";
                 String description = Arrays.stream(chunks).skip(2).map(String::trim).collect(Collectors.joining(", "));
 
-                if (fileItem.isEmpty()) {
+                if (directoryItem.isEmpty()) {
                     response.append("<li><h3 class=\"name\">").append(name.trim()).append("</h3>");
                 } else {
-                    response.append("<li><a href=\"#").append(fileItem.getPath())
-                            .append("\" onclick=\"doGalleryClick('").append(fileItem.getPath()).append("', this)\">")
+                    response.append("<li><a href=\"#").append(directoryItem.getPath())
+                            .append("\" onclick=\"doGalleryClick('").append(directoryItem.getPath()).append("', this)\">")
                             .append("<h3 class=\"name\">").append(name.trim()).append("</h3></a>");
                 }
                 response.append("<p class=\"date\">");
@@ -73,16 +75,14 @@ public class GalleriesServlet extends HttpServlet {
         out.close();
     }
 
-    protected String galleryList(String path, String userId, BiConsumer<FileItem, StringBuilder> itemBuilder) {
+    protected String galleryList(String path, String userId, BiConsumer<DirectoryItem, StringBuilder> itemBuilder) {
         final StringBuilder response = new StringBuilder();
-        FileService fileService = FileService.getService(userId);
+        DirectoryItem gallery = FileService.getService().fetchDirectoryItem(path);
 
-        FileItem gallery = fileService.getFileItem(path);
-
-        fileService.getFileItems(gallery).stream()
-                .filter(FileItem::isDirectory)
-                .sorted((item1, item2)->item1.getPath().compareToIgnoreCase(item2.getPath()))
-                .forEach(fileItem -> itemBuilder.accept(fileItem, response));
+        gallery.getDirectories().stream()
+                .filter(item -> AuthenticationService.getService().checkPathPermission(item.getPath(), userId))
+                .sorted((item1, item2) -> item1.getPath().compareToIgnoreCase(item2.getPath()))
+                .forEach(directoryItem -> itemBuilder.accept(directoryItem, response));
 
         return response.toString();
     }
