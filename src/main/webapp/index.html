@@ -22,14 +22,14 @@
 <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div><br/>
 
 <div id="galleries">
-    <input class="search" placeholder="Keresés" />
-    <button class="sort" data-sort="name">
+    <input class="search" placeholder="Keresés" tabindex="0" />
+    <button class="sort" data-sort="name" tabindex="-1">
         Rendez név szerint
     </button>
-    <button class="sort" data-sort="date">
+    <button class="sort" data-sort="date" tabindex="-1">
         Rendez dátum szerint
     </button>
-    <button class="sort" data-sort="description">
+    <button class="sort" data-sort="description" tabindex="-1">
         Rendez leírás szerint
     </button>
 
@@ -48,6 +48,17 @@
         galleryNode.innerHTML = listData;
 
         new List('galleries', options);
+
+        var links = document.getElementsByTagName('a');
+        if (window.location.hash.length>0) {
+            for (var ind = 0; ind < links.length; ++ind) {
+                var el = links[ind];
+                if (el.href.substr(el.href.indexOf('#')) === window.location.hash) {
+                    doGalleryClick(window.location.hash.substr(1), el);
+                    break;
+                }
+            }
+        }
     }
 
     function doGalleryClick(path, node) {
@@ -56,6 +67,13 @@
                 dynamic: true,
                 dynamicEl: items
             });
+
+            utils.on(node, 'onBeforeClose', function() {
+                window.location.hash = '';
+                activeGalleryEl = null;
+            });
+
+            activeGalleryEl = node;
 
         });
     }
@@ -84,6 +102,66 @@
         xhttp.open(method, url, true);
         xhttp.send(payload);
     }
+
+    var activeGalleryEl = null;
+
+    function keyboardLogic(ev) {
+        if (activeGalleryEl==null) {
+            var links = [], toFocus = 0, ind = 0;
+            switch (ev.key) {
+                case "s":
+                case "1":
+                    var searchItems = document.getElementsByClassName('search');
+                    if (searchItems.length>0 && document.activeElement !== searchItems[0]) {
+                        searchItems[0].focus();
+                        ev.preventDefault();
+                    }
+                    break;
+                case "ArrowLeft":
+                    links = document.getElementsByTagName("a");
+                    for (ind=0; ind<links.length; ++ind) {
+                        if (document.activeElement===links[ind]) {
+                            toFocus = ind === 0 ? toFocus = links.length-1 : ind - 1;
+                            break;
+                        }
+                    }
+                    links[toFocus].focus();
+                    break;
+                case "ArrowRight":
+                    links = document.getElementsByTagName("a");
+                    for (ind=0; ind<links.length; ++ind) {
+                        if (document.activeElement===links[ind]) {
+                            toFocus = ind === links.length - 1 ? 0 : ind + 1;
+                            break;
+                        }
+                    }
+                    links[toFocus].focus();
+                    break;
+            }
+        } else {
+            switch (ev.key) {
+                case "Backspace":
+                    window.lgData[activeGalleryEl.getAttribute('lg-uid')].destroy();
+                    break;
+                case "1":
+                    var fsItems = document.getElementsByClassName('lg-fullscreen');
+                    if (fsItems.length>0) {
+                        fsItems[0].click();
+                    }
+                    break;
+                case "Enter":
+                    ev.preventDefault();
+                    var videoItems = document.getElementsByClassName('lg-video');
+                    if (videoItems.length>0) {
+                        videoItems[0].click();
+                    }
+                    utils.trigger(activeGalleryEl, 'onSlideClick');
+                    break;
+            }
+        }
+        console.log(ev);
+    }
+    document.onkeydown = keyboardLogic;
 
 </script>
 </body>

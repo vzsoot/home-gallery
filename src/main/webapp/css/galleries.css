@@ -37,11 +37,14 @@ a h3, .sub-gallery a {
 .sub-gallery a {
     margin: 2px;
 }
-a h3:hover, .sub-gallery a:hover {
-    background-color: #ff5400;
-}
 a:visited, a:visited h3 {
     background-color: #fec57d;
+}
+:focus {
+    outline: none;
+}
+a h3:hover, .sub-gallery a:hover, a:focus, a:focus h3 {
+    background-color: #ff5400;
 }
 .sub-gallery {
     font-style: italic;

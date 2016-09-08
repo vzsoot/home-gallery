@@ -16,6 +16,6 @@ public class InitServlet extends HttpServlet {
         long timeStart = System.currentTimeMillis();
         FileService.getService();
         long timeEnd = System.currentTimeMillis();
-        System.out.println("Directory finished in " + (timeEnd-timeStart) + "ms");
+        System.out.println("Directory read finished in " + (timeEnd-timeStart) + "ms");
     }
 }
