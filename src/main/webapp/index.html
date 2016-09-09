@@ -108,16 +108,16 @@
     function keyboardLogic(ev) {
         if (activeGalleryEl==null) {
             var links = [], toFocus = 0, ind = 0;
-            switch (ev.key) {
-                case "s":
-                case "1":
+            switch (ev.keyCode) {
+                case 83:
+                case 49:
                     var searchItems = document.getElementsByClassName('search');
                     if (searchItems.length>0 && document.activeElement !== searchItems[0]) {
                         searchItems[0].focus();
                         ev.preventDefault();
                     }
                     break;
-                case "ArrowLeft":
+                case 37:
                     links = document.getElementsByTagName("a");
                     for (ind=0; ind<links.length; ++ind) {
                         if (document.activeElement===links[ind]) {
@@ -127,7 +127,7 @@
                     }
                     links[toFocus].focus();
                     break;
-                case "ArrowRight":
+                case 39:
                     links = document.getElementsByTagName("a");
                     for (ind=0; ind<links.length; ++ind) {
                         if (document.activeElement===links[ind]) {
@@ -139,17 +139,19 @@
                     break;
             }
         } else {
-            switch (ev.key) {
-                case "Backspace":
+            switch (ev.keyCode) {
+                case 8:
                     window.lgData[activeGalleryEl.getAttribute('lg-uid')].destroy();
+                    ev.preventDefault();
                     break;
-                case "1":
+                case 83:
+                case 49:
                     var fsItems = document.getElementsByClassName('lg-fullscreen');
                     if (fsItems.length>0) {
                         fsItems[0].click();
                     }
                     break;
-                case "Enter":
+                case 13:
                     ev.preventDefault();
                     var videoItems = document.getElementsByClassName('lg-video');
                     if (videoItems.length>0) {

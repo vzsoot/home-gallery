@@ -33,7 +33,7 @@ public class GalleriesServlet extends HttpServlet {
                     response.append("<a href=\"#").append(fileItem.getPath())
                             .append("\" onclick=\"doGalleryClick('")
                             .append(fileItem.getPath())
-                            .append("', this)\" tabindex=\"0\">");
+                            .append("', this)\">");
                     response.append(directoryName);
                     response.append("</a>");
                 }
