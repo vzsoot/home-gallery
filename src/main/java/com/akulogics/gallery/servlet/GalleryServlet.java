@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class GalleryServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
-        String path = req.getParameter("path");
+        String path = URLDecoder.decode(req.getParameter("path"), "utf8");
 
         List<GalleryItem> galleryItems = new LinkedList<>();
 

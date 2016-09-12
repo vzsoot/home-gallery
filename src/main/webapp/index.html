@@ -141,6 +141,7 @@
         } else {
             switch (ev.keyCode) {
                 case 8:
+                case 50:
                     window.lgData[activeGalleryEl.getAttribute('lg-uid')].destroy();
                     ev.preventDefault();
                     break;
@@ -161,7 +162,6 @@
                     break;
             }
         }
-        console.log(ev);
     }
     document.onkeydown = keyboardLogic;
 

@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -30,12 +32,16 @@ public class GalleriesServlet extends HttpServlet {
             BiConsumer<DirectoryItem, StringBuilder> galleryLinkBuilder = (fileItem, response) -> {
                 String directoryName = fileItem.getFile().getName().trim();
                 if (!fileItem.isEmpty()) {
-                    response.append("<a href=\"#").append(fileItem.getPath())
-                            .append("\" onclick=\"doGalleryClick('")
-                            .append(fileItem.getPath())
-                            .append("', this)\">");
-                    response.append(directoryName);
-                    response.append("</a>");
+                    try {
+                        response.append("<a href=\"#").append(URLEncoder.encode(fileItem.getPath(), "utf8"))
+                                .append("\" onclick=\"doGalleryClick('")
+                                .append(fileItem.getPath())
+                                .append("', this)\">");
+                        response.append(directoryName);
+                        response.append("</a>");
+                    } catch (UnsupportedEncodingException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             };
 
@@ -50,9 +56,13 @@ public class GalleriesServlet extends HttpServlet {
                 if (directoryItem.isEmpty()) {
                     response.append("<li><h3 class=\"name\">").append(name.trim()).append("</h3>");
                 } else {
-                    response.append("<li><a href=\"#").append(directoryItem.getPath())
-                            .append("\" onclick=\"doGalleryClick('").append(directoryItem.getPath()).append("', this)\">")
-                            .append("<h3 class=\"name\">").append(name.trim()).append("</h3></a>");
+                    try {
+                        response.append("<li><a href=\"#").append(URLEncoder.encode(directoryItem.getPath(), "utf8"))
+                                .append("\" onclick=\"doGalleryClick('").append(directoryItem.getPath()).append("', this)\">")
+                                .append("<h3 class=\"name\">").append(name.trim()).append("</h3></a>");
+                    } catch (UnsupportedEncodingException ex) {
+                        ex.printStackTrace();
+                    }
                 }
                 response.append("<p class=\"date\">");
                 response.append(date);
