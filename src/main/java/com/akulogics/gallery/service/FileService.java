@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,6 +21,7 @@ import java.util.stream.Stream;
  */
 public class FileService {
 
+    private final long CACHE_REBUILD_DELAY = 5000;
     private final String PERMISSION_FILE = System.getProperty("permissionFile", "gallery.permitted.list");
 
     private final String GALLERY_PATH = System.getProperty("galleryPath", ".");
@@ -35,13 +38,17 @@ public class FileService {
     public static FileService getService() {
         if (service==null) {
             synchronized (FileService.class.getClass()) {
-                service = new FileService();
+                try {
+                    service = new FileService();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
         return service;
     }
 
-    private FileService() {
+    private FileService() throws IOException {
         initItemCache();
     }
 
@@ -168,11 +175,55 @@ public class FileService {
         return result;
     }
 
-    private Map<String, CacheableItem> itemCache = new ConcurrentHashMap<>();
+    private final Map<String, CacheableItem> itemCache = new ConcurrentHashMap<>();
 
-    protected void initItemCache() {
+    protected void initItemCache() throws IOException {
+        WatchDirService watchDirService = new WatchDirService(GALLERY_PATH_ITEM, updateItemCache);
+        watchDirService.processEvents();
+
         itemCache.put("", itemCacheBuilder(""));
     }
+
+    private Thread updateCacheThread = null;
+
+    protected BiConsumer<Path, WatchEvent<Path>> updateItemCache = (dir, ev) -> {
+        try {
+            System.out.println("Galleries updated -> " + dir + " : " + ev.context());
+
+            Path itemPath = GALLERY_PATH_ITEM.equals(dir) ? ev.context() :
+                    Paths.get(dir.subpath(GALLERY_PATH_ITEM.getNameCount(), dir.getNameCount()).toString(), ev.context().toString());
+
+            if (itemCache.containsKey(itemPath.toString())) {
+                itemCache.remove(itemPath.toString());
+                System.out.println("Cache item removed -> " + dir + " : " + ev.context());
+            }
+            if (updateCacheThread != null) {
+                updateCacheThread.interrupt();
+                updateCacheThread = null;
+            }
+            updateCacheThread = new Thread(() -> {
+                try {
+                    Thread.sleep(CACHE_REBUILD_DELAY);
+                    long start = System.currentTimeMillis();
+                    System.out.println("Start rebuilding item cache!");
+
+                    itemCacheBuilder("");
+
+                    long end = System.currentTimeMillis();
+                    System.out.println("End rebuilding item cache! Took: " + (end - start) + "ms");
+                } catch (InterruptedException e) {
+                    System.out.println("Cache rebuild delay canceled!");
+                }
+            });
+            updateCacheThread.setDaemon(true);
+            updateCacheThread.start();
+
+            System.out.println("Cache rebuild delay set!");
+
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+    };
 
     protected CacheableItem itemCacheBuilder(String path) {
         CacheableItem result = null;
@@ -187,8 +238,10 @@ public class FileService {
 
             List<FileItem> pathItems = getFilesForDirectory(directoryItem);
             pathItems.forEach(item -> {
-                item.setParent(directoryItem);
-                itemCache.put(item.getPath(), item);
+                if (!itemCache.containsKey(item.getPath())) {
+                    item.setParent(directoryItem);
+                    itemCache.put(item.getPath(), item);
+                }
             });
 
             directoryItem.setDirectories(
