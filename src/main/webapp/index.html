@@ -152,6 +152,17 @@
                         fsItems[0].click();
                     }
                     break;
+                case 51:
+                	ev.preventDefault();
+                    var videoObjectItem = document.querySelector('.lg-video-playing video');
+                    if (videoObjectItem && videoObjectItem.webkitDisplayingFullscreen!==undefined) {
+                    	if (videoObjectItem.webkitDisplayingFullscreen===false) {
+                        	videoObjectItem.webkitRequestFullScreen();
+                    	} else {
+                        	videoObjectItem.webkitExitFullscreen();
+                    	}
+                    }
+                    break;
                 case 13:
                     ev.preventDefault();
                     var videoItems = document.getElementsByClassName('lg-video');
