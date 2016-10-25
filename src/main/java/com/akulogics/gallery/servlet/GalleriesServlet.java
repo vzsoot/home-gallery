@@ -4,6 +4,7 @@ import com.akulogics.gallery.bean.DirectoryItem;
 import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
+import com.akulogics.gallery.service.LoggerService;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -29,6 +30,8 @@ public class GalleriesServlet extends HttpServlet {
         String htmlResponse = "";
 
         if (userId!=null) {
+            LoggerService.log((String)userId, "Fetch galleries");
+
             BiConsumer<DirectoryItem, StringBuilder> galleryLinkBuilder = (fileItem, response) -> {
                 String directoryName = fileItem.getFile().getName().trim();
                 if (!fileItem.isEmpty()) {

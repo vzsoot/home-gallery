@@ -4,6 +4,7 @@ import com.akulogics.gallery.bean.DirectoryItem;
 import com.akulogics.gallery.bean.GalleryItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
+import com.akulogics.gallery.service.LoggerService;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.servlet.ServletException;
@@ -28,6 +29,8 @@ public class GalleryServlet extends HttpServlet {
         List<GalleryItem> galleryItems = new LinkedList<>();
 
         if (userId != null && AuthenticationService.getService().checkPathPermission(path, userId)) {
+            LoggerService.log(userId, "Open gallery path: " + path);
+
             DirectoryItem galleryDirectory = FileService.getService().fetchDirectoryItem(path);
             if (galleryDirectory!=null) {
                 galleryDirectory.getFiles().stream()
