@@ -4,6 +4,7 @@ import com.akulogics.gallery.bean.CacheableItem;
 import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
+import com.akulogics.gallery.service.LoggerService;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
@@ -24,11 +25,10 @@ public class ItemServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
 
-        OutputStream out = resp.getOutputStream();
-
         if (userId!=null) {
-            try {
-                String path = req.getParameter("path");
+            String path = req.getParameter("path");
+
+            try (OutputStream out = resp.getOutputStream()){
 
                 FileItem fileItem = FileService.getService().fetchFileItem(path);
 
@@ -82,30 +82,32 @@ public class ItemServlet extends HttpServlet {
                         if (!fileItem.getMimeType().startsWith("video")) {
                             resp.setHeader("Content-disposition", "attachment; filename=" + fileItem.getFile().getName());
                         } else {
+                            String contentRange = "bytes " + skip + "-" + (fileItem.getFile().length() - 1) + "/" + fileItem.getFile().length();
+
                             resp.setHeader("Accept-Ranges", "bytes");
                             resp.setHeader("Content-Length", Long.toString(fileItem.getFile().length() - skip));
-                            resp.setHeader("Content-Range", "bytes " + skip + "-" + (fileItem.getFile().length() - 1) + "/" + fileItem.getFile().length());
+                            resp.setHeader("Content-Range", contentRange);
                             resp.setStatus(206);
+
+                            LoggerService.log(userId, "Playing video: " + path + "; Range: " + contentRange);
                         }
                         out.flush();
 
-                        FileInputStream in = new FileInputStream(fileItem.getFile());
-                        in.skip(skip);
-                        byte[] buffer = new byte[4096];
-                        int length;
-                        while ((length = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, length);
+                        try (FileInputStream in = new FileInputStream(fileItem.getFile())) {
+                            in.skip(skip);
+                            byte[] buffer = new byte[4096];
+                            int length;
+                            while ((length = in.read(buffer)) > 0) {
+                                out.write(buffer, 0, length);
+                            }
+                            in.close();
+                            out.flush();
                         }
-                        in.close();
-                        out.flush();
                     }
                 }
             } catch (Throwable ex) {
-                System.gc();
-                ex.printStackTrace();
+                LoggerService.log(userId, "Path: " + path + "; Error: " + ex.getMessage());
             }
         }
-
-        out.close();
     }
 }
