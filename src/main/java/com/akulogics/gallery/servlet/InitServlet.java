@@ -1,6 +1,7 @@
 package com.akulogics.gallery.servlet;
 
 import com.akulogics.gallery.service.FileService;
+import com.akulogics.gallery.service.LoggerService;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -12,10 +13,10 @@ public class InitServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        System.out.println("Directory read started!");
+        LoggerService.log("Directory read started!");
         long timeStart = System.currentTimeMillis();
         FileService.getService();
         long timeEnd = System.currentTimeMillis();
-        System.out.println("Directory read finished in " + (timeEnd-timeStart) + "ms");
+        LoggerService.log("Directory read finished in " + (timeEnd-timeStart) + "ms");
     }
 }

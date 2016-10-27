@@ -1,6 +1,8 @@
 package com.akulogics.gallery.servlet;
 
 import com.akulogics.gallery.service.AuthenticationService;
+import com.akulogics.gallery.service.LoggerService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -24,11 +26,15 @@ public class LoginServlet extends HttpServlet {
         String token = req.getReader().readLine();
         OutputStreamWriter out = new OutputStreamWriter(new BufferedOutputStream(resp.getOutputStream()));
 
-        if (AuthenticationService.getService().fetchProfile(token)!=null) {
+        GoogleIdToken idToken = AuthenticationService.getService().fetchProfile(token);
+        if (idToken!=null) {
             HttpSession session = req.getSession();
             session.setAttribute(SESSION_TOKEN, token);
+            session.setAttribute(SESSION_USER, idToken.getPayload().getEmail());
 
             out.write("{\"valid\": true}");
+
+            LoggerService.log((String)session.getAttribute(SESSION_USER), "Login successful");
         } else {
             out.write("{\"valid\": false}");
         }
