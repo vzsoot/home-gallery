@@ -21,6 +21,12 @@ import java.io.OutputStream;
  * Created by zsolt_venczel on 2016.08.17
  */
 public class ItemServlet extends HttpServlet {
+
+    @Override
+    public void init() throws ServletException {
+        LoggerService.log("ItemServlet init.");
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
@@ -94,6 +100,7 @@ public class ItemServlet extends HttpServlet {
                         out.flush();
 
                         try (FileInputStream in = new FileInputStream(fileItem.getFile())) {
+                            //noinspection ResultOfMethodCallIgnored
                             in.skip(skip);
                             byte[] buffer = new byte[4096];
                             int length;

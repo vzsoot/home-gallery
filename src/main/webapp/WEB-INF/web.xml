@@ -20,14 +20,17 @@
     <servlet>
         <servlet-name>gallery</servlet-name>
         <servlet-class>com.akulogics.gallery.servlet.GalleryServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>galleriesServlet</servlet-name>
         <servlet-class>com.akulogics.gallery.servlet.GalleriesServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>itemServlet</servlet-name>
         <servlet-class>com.akulogics.gallery.servlet.ItemServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>initServlet</servlet-name>

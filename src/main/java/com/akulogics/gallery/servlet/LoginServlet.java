@@ -22,6 +22,12 @@ public class LoginServlet extends HttpServlet {
     public static final String SESSION_USER = "user";
 
     @Override
+    public void init() throws ServletException {
+        AuthenticationService.getService().checkPathPermission("", "");
+        LoggerService.log("LoginServlet init.");
+    }
+
+    @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String token = req.getReader().readLine();
         OutputStreamWriter out = new OutputStreamWriter(new BufferedOutputStream(resp.getOutputStream()));

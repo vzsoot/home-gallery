@@ -22,6 +22,11 @@ import java.util.List;
 public class GalleryServlet extends HttpServlet {
 
     @Override
+    public void init() throws ServletException {
+        LoggerService.log("GalleryServlet init.");
+    }
+
+    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
         String path = URLDecoder.decode(req.getParameter("path"), "utf8");

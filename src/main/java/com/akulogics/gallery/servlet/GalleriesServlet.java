@@ -1,7 +1,6 @@
 package com.akulogics.gallery.servlet;
 
 import com.akulogics.gallery.bean.DirectoryItem;
-import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
 import com.akulogics.gallery.service.LoggerService;
@@ -23,6 +22,11 @@ import java.util.stream.Collectors;
  * Created by zsolt_venczel on 2016.08.17
  */
 public class GalleriesServlet extends HttpServlet {
+
+    @Override
+    public void init() throws ServletException {
+        LoggerService.log("GalleriesServlet init.");
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
