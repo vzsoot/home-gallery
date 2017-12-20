@@ -174,10 +174,14 @@ public class FileService {
     private Map<String, CacheableItem> itemCache = new HashMap<>();
 
     public void initItemCache() {
+        System.gc();
         itemCache.put("", itemCacheBuilder(""));
+        System.gc();
     }
 
     private CacheableItem itemCacheBuilder(String path) {
+        LoggerService.log("Path: " + path);
+
         CacheableItem result = null;
 
         CacheableItem pathItem = itemCache.get(path);
