@@ -6,40 +6,50 @@ import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
 import com.akulogics.gallery.service.LoggerService;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Created by zsolt_venczel on 2016.08.16
  */
+@WebServlet(urlPatterns = "/gallery", loadOnStartup = 1)
 public class GalleryServlet extends HttpServlet {
 
     @Override
-    public void init() throws ServletException {
+    public void init() {
         LoggerService.log("GalleryServlet init.");
     }
 
+    @Autowired
+    AuthenticationService authenticationService;
+
+    @Autowired
+    FileService fileService;
+
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String userId = (String) req.getAttribute(LoginServlet.SESSION_USER);
         String path = URLDecoder.decode(req.getParameter("path"), "utf8");
 
         List<GalleryItem> galleryItems = new LinkedList<>();
 
-        if (userId != null && AuthenticationService.getService().checkPathPermission(path, userId)) {
+        if (userId != null && authenticationService.checkPathPermission(path, userId)) {
             LoggerService.log(userId, "Open gallery path: " + path);
 
-            DirectoryItem galleryDirectory = FileService.getService().fetchDirectoryItem(path);
-            if (galleryDirectory!=null) {
+            DirectoryItem galleryDirectory = fileService.fetchDirectoryItem(path);
+            if (galleryDirectory != null) {
                 galleryDirectory.getFiles().stream()
-                        .filter(item -> AuthenticationService.getService().checkPathPermission(item.getPath(), userId))
+                        .filter(item -> authenticationService.checkPathPermission(item.getPath(), userId))
                         .sorted((item1, item2) -> item1.getPath().compareToIgnoreCase(item2.getPath()))
                         .forEach(item -> {
                             String pathParam = "/item?path=" + item.getPath();
@@ -55,7 +65,11 @@ public class GalleryServlet extends HttpServlet {
                             } else {
                                 galleryItem.setDownloadUrl(pathParam);
                                 if (item.getPathFull() != null) {
-                                    galleryItem.setSrc("/item?path=" + item.getPathFull());
+                                    try {
+                                        galleryItem.setSrc("/item?path=" + URLEncoder.encode(item.getPathFull(), "UTF-8"));
+                                    } catch (UnsupportedEncodingException e) {
+                                        LoggerService.log(userId, e.getMessage());
+                                    }
                                 } else {
                                     galleryItem.setSrc(pathParam + "&height=1080");
                                 }

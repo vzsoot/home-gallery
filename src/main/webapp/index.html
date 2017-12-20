@@ -7,7 +7,6 @@
 
     <script src="https://apis.google.com/js/platform.js" async defer></script>
     <script src="js/lightgallery.min.js"></script>
-    <script src="js/lg-thumbnail.min.js"></script>
     <script src="js/lg-fullscreen.min.js"></script>
     <script src="js/lg-video.min.js"></script>
     <script src="js/list.min.js"></script>
@@ -41,7 +40,9 @@
 <script>
     function loadList(listData) {
         var options = {
-            valueNames: [ 'name', 'date', 'description', 'sub-gallery' ]
+            valueNames: [ 'name', 'date', 'description', 'sub-gallery' ],
+            showAfterLoad: false,
+            preload: 5
         };
 
         var galleryNode = document.getElementById('galleryList');
@@ -62,7 +63,7 @@
     }
 
     function doGalleryClick(path, node) {
-        xhr('gallery?path='+path, 'GET', null, function(items) {
+        xhr('gallery?path='+encodeURI(path), 'GET', null, function(items) {
             lightGallery(node, {
                 dynamic: true,
                 dynamicEl: items

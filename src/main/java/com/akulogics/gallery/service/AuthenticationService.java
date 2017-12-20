@@ -8,21 +8,20 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
 /**
  * Created by zsolt_venczel on 2016.08.17
  */
+@Service
 public class AuthenticationService {
 
-    private AuthenticationService() {
-    }
+    private FileService fileService;
 
-    private static AuthenticationService service = new AuthenticationService();
-
-    public static AuthenticationService getService() {
-        return service;
+    public AuthenticationService(FileService fileService) {
+        this.fileService = fileService;
     }
 
     public GoogleIdToken fetchProfile(String token) {
@@ -49,23 +48,23 @@ public class AuthenticationService {
         boolean result = true;
         DirectoryItem checkItem = null;
 
-        FileItem fileItem = FileService.getService().fetchFileItem(path);
+        FileItem fileItem = this.fileService.fetchFileItem(path);
 
         if (fileItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
-            if (fileItem.getParent()==null) {
-                checkItem = (DirectoryItem)fileItem;
+            if (fileItem.getParent() == null) {
+                checkItem = (DirectoryItem) fileItem;
             } else {
-                checkItem = (DirectoryItem)fileItem;
+                checkItem = (DirectoryItem) fileItem;
                 result = checkPathPermission(fileItem.getParent().getPath(), userId);
             }
-        } else if (fileItem.getParent()!=null) {
+        } else if (fileItem.getParent() != null) {
             result = checkPathPermission(fileItem.getParent().getPath(), userId);
         }
 
-        if (checkItem!=null && result) {
+        if (checkItem != null && result) {
             PermissionItem permissionItem = checkItem.getPermissionItem();
 
-            if (permissionItem!=null) {
+            if (permissionItem != null) {
                 result = permissionItem.getPermission().contains(userId);
             }
         }

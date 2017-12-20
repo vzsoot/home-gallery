@@ -5,41 +5,48 @@ import com.akulogics.gallery.bean.FileItem;
 import com.akulogics.gallery.service.AuthenticationService;
 import com.akulogics.gallery.service.FileService;
 import com.akulogics.gallery.service.LoggerService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 
 /**
  * Created by zsolt_venczel on 2016.08.17
  */
+@WebServlet(urlPatterns = "/item", loadOnStartup = 1)
 public class ItemServlet extends HttpServlet {
 
     @Override
-    public void init() throws ServletException {
+    public void init() {
         LoggerService.log("ItemServlet init.");
     }
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String userId = (String)req.getAttribute(LoginServlet.SESSION_USER);
+    @Autowired
+    private FileService fileService;
 
-        if (userId!=null) {
+    @Autowired
+    private AuthenticationService authenticationService;
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
+        String userId = (String) req.getAttribute(LoginServlet.SESSION_USER);
+
+        if (userId != null) {
             String path = req.getParameter("path");
 
-            try (OutputStream out = resp.getOutputStream()){
+            try (OutputStream out = resp.getOutputStream()) {
 
-                FileItem fileItem = FileService.getService().fetchFileItem(path);
+                FileItem fileItem = fileService.fetchFileItem(path);
 
                 if (fileItem != null && fileItem.getItemType() == CacheableItem.ItemType.FILE &&
-                        AuthenticationService.getService().checkPathPermission(path, userId)) {
+                        authenticationService.checkPathPermission(path, userId)) {
                     Integer height;
 
                     try {

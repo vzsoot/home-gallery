@@ -2,6 +2,8 @@ package com.akulogics.gallery.service;
 
 import com.akulogics.gallery.bean.*;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,41 +18,43 @@ import java.util.stream.Stream;
 /**
  * Created by zsolt_venczel on 2016.08.23
  */
+@Service
 public class FileService {
 
-    private final String PERMISSION_FILE = System.getProperty("permissionFile", "gallery.permitted.list");
+    private String PERMISSION_FILE;
+    private final String GALLERY_PATH;
+    private final Path GALLERY_PATH_ITEM;
 
-    private final String GALLERY_PATH = System.getProperty("galleryPath", ".");
-    private final Path GALLERY_PATH_ITEM = Paths.get(GALLERY_PATH);
-
-    private final String[] SUPPORTED_EXTENSIONS = System.getProperty("extensions", "jpg,jpeg,png,m4v,mp4,mkv,wmv,mov").split(",");
-    private final String FULL_SIZE_DIR = System.getProperty("fullSizeDir", "full");
-    private final String THUMBNAIL_DIR = System.getProperty("thumbnailDir", "thumb");
+    private String[] SUPPORTED_EXTENSIONS;
+    private final String FULL_SIZE_DIR;
+    private final String THUMBNAIL_DIR;
 
     private final Tika tika = new Tika();
 
-    private static FileService service = null;
+    public FileService(
+            @Value(value = "${permissionFile}") String permissionFile,
+            @Value(value = "${galleryPath}") String galleryPath,
+            @Value(value = "${extensions}") String[] extensions,
+            @Value(value = "${fullSizeDir}") String fullSizeDir,
+            @Value(value = "${thumbnailDir}") String thumbnailDir
+    ) {
+        this.PERMISSION_FILE = permissionFile;
+        this.GALLERY_PATH = galleryPath;
 
-    public static FileService getService() {
-        if (service==null) {
-            synchronized (FileService.class.getClass()) {
-                service = new FileService();
-            }
-        }
-        return service;
+        this.GALLERY_PATH_ITEM = Paths.get(GALLERY_PATH);
+
+        this.SUPPORTED_EXTENSIONS = extensions;
+        this.FULL_SIZE_DIR = fullSizeDir;
+        this.THUMBNAIL_DIR = thumbnailDir;
     }
 
-    private FileService() {
-        initItemCache();
-    }
-
-    protected FileItem getItem(File path) {
+    private FileItem getItem(File path) {
         return getItem(GALLERY_PATH_ITEM.relativize(path.toPath()).toString());
     }
 
-    Predicate<File> validFileItem = file ->
+    private Predicate<File> validFileItem = file ->
             (file.isDirectory() && !file.getName().startsWith("!"))
-            || Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith);
+                    || Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith);
 
     private FileItem getFileItem(File file, String path) {
         FileItem result = new FileItem();
@@ -103,7 +106,7 @@ public class FileService {
         return result;
     }
 
-    protected FileItem getItem(String path) {
+    private FileItem getItem(String path) {
         FileItem result = null;
 
         Path galleryPath = Paths.get(GALLERY_PATH, path);
@@ -123,23 +126,23 @@ public class FileService {
         return result;
     }
 
-    protected List<FileItem> getFilesForDirectory(DirectoryItem directoryItem) {
+    private List<FileItem> getFilesForDirectory(DirectoryItem directoryItem) {
         List<FileItem> result = Collections.emptyList();
-        if (directoryItem!=null) {
+        if (directoryItem != null) {
             File[] files = directoryItem.getFile().listFiles();
-            if (files!=null) {
+            if (files != null) {
                 result = Arrays.stream(files).map(this::getItem)
-                        .filter(file -> file!=null)
+                        .filter(Objects::nonNull)
                         .collect(Collectors.toList());
             }
         }
         return result;
     }
 
-    Predicate<File> validPermissionItem = file ->
+    private Predicate<File> validPermissionItem = file ->
             (!file.isDirectory() && PERMISSION_FILE.equals(file.getName()));
 
-    protected PermissionItem getPermissionItem(String path) {
+    private PermissionItem getPermissionItem(String path) {
         PermissionItem result = null;
 
         Path permissionPath = Paths.get(GALLERY_PATH, path);
@@ -157,33 +160,33 @@ public class FileService {
         return result;
     }
 
-    protected boolean galleryHasItem(File directoryItem) {
+    private boolean galleryHasItem(File directoryItem) {
         boolean result = false;
 
         File[] files = directoryItem.listFiles();
-        if (files!=null) {
+        if (files != null) {
             result = Arrays.stream(files).anyMatch(file -> Arrays.stream(SUPPORTED_EXTENSIONS).anyMatch(file.getPath().toLowerCase()::endsWith));
         }
 
         return result;
     }
 
-    private Map<String, CacheableItem> itemCache = new ConcurrentHashMap<>();
+    private Map<String, CacheableItem> itemCache = new HashMap<>();
 
-    protected void initItemCache() {
+    public void initItemCache() {
         itemCache.put("", itemCacheBuilder(""));
     }
 
-    protected CacheableItem itemCacheBuilder(String path) {
+    private CacheableItem itemCacheBuilder(String path) {
         CacheableItem result = null;
 
         CacheableItem pathItem = itemCache.get(path);
-        if (pathItem==null) {
+        if (pathItem == null) {
             pathItem = getItem(path);
         }
 
-        if (pathItem!=null && pathItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
-            DirectoryItem directoryItem = (DirectoryItem)pathItem;
+        if (pathItem != null && pathItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
+            DirectoryItem directoryItem = (DirectoryItem) pathItem;
 
             List<FileItem> pathItems = getFilesForDirectory(directoryItem);
             pathItems.forEach(item -> {
@@ -208,15 +211,15 @@ public class FileService {
 
             String permissionItemPath = Paths.get(path, PERMISSION_FILE).toString();
             CacheableItem permissionItem = itemCache.get(permissionItemPath);
-            if (permissionItem==null) {
+            if (permissionItem == null) {
                 permissionItem = getPermissionItem(permissionItemPath);
-                if (permissionItem==null) {
+                if (permissionItem == null) {
                     permissionItem = EmptyItem.getItem();
                 }
                 itemCache.put(permissionItemPath, permissionItem);
             }
             if (permissionItem.getItemType() == CacheableItem.ItemType.PERMISSION) {
-                directoryItem.setPermissionItem((PermissionItem)permissionItem);
+                directoryItem.setPermissionItem((PermissionItem) permissionItem);
             }
 
             result = directoryItem;
@@ -225,7 +228,7 @@ public class FileService {
         return result;
     }
 
-    protected Map<String, CacheableItem> getFileItemCache() {
+    private Map<String, CacheableItem> getFileItemCache() {
         return itemCache;
     }
 
@@ -233,11 +236,11 @@ public class FileService {
         FileItem result;
         CacheableItem cacheableItem = getFileItemCache().get(path);
 
-        if (cacheableItem!=null) {
-            result = (FileItem)cacheableItem;
+        if (cacheableItem != null) {
+            result = (FileItem) cacheableItem;
         } else {
             result = getItem(path);
-            if (result!=null) {
+            if (result != null) {
                 result.setParent(fetchFileItem(Paths.get(result.getPath()).getParent().toString()));
             }
         }
@@ -249,8 +252,8 @@ public class FileService {
         DirectoryItem result = null;
         CacheableItem cacheableItem = getFileItemCache().get(path);
 
-        if (cacheableItem!=null && cacheableItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
-            result = ((DirectoryItem)cacheableItem);
+        if (cacheableItem != null && cacheableItem.getItemType() == CacheableItem.ItemType.DIRECTORY) {
+            result = ((DirectoryItem) cacheableItem);
         }
 
         return result;
